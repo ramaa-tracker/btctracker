@@ -282,6 +282,52 @@
   .btn-add:active { transform: translateY(0); }
   .btn-add:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+  /* ── TYPE TOGGLE ── */
+  .type-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .type-btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+  }
+
+  .type-btn.buy.active  { background: rgba(247,147,26,0.15); border-color: var(--accent);  color: var(--accent); }
+  .type-btn.sell.active { background: rgba(255,23,68,0.12);  border-color: var(--red);     color: var(--red); }
+  .type-btn:not(.active):hover { border-color: var(--muted); color: var(--text); }
+
+  .btn-add.sell { background: var(--red); }
+  .btn-add.sell:hover { background: #ff4569; box-shadow: 0 4px 20px rgba(255,23,68,0.3); }
+
+  /* row type badges */
+  .badge {
+    display: inline-block;
+    font-size: 8px;
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-buy  { background: rgba(247,147,26,0.15); color: var(--accent); }
+  .badge-sell { background: rgba(255,23,68,0.12);  color: var(--red); }
+
   /* ── TABLE ── */
   .table-wrap {
     background: var(--surface);
@@ -461,8 +507,12 @@
 
   <!-- FORM -->
   <div class="section">
-    <div class="section-title">Registrar compra</div>
+    <div class="section-title">Registrar operación</div>
     <div class="form-card">
+      <div class="type-toggle">
+        <button class="type-btn buy active" id="typeBuy" onclick="setType('buy')">▲ Compra</button>
+        <button class="type-btn sell"       id="typeSell" onclick="setType('sell')">▼ Venta</button>
+      </div>
       <div class="form-row">
         <div class="field">
           <label>Fecha</label>
@@ -483,16 +533,17 @@
 
   <!-- TABLE -->
   <div class="section">
-    <div class="section-title">Historial de compras</div>
+    <div class="section-title">Historial de operaciones</div>
     <div class="table-scroll">
       <div class="table-wrap">
         <table id="tradesTable">
           <thead>
             <tr>
               <th>Fecha</th>
+              <th>Tipo</th>
               <th>Cantidad BTC</th>
-              <th>Precio compra</th>
-              <th>Costo total</th>
+              <th>Precio op.</th>
+              <th>Total USD</th>
               <th>Precio actual</th>
               <th>Val. actual</th>
               <th>P&amp;L USD</th>
@@ -501,7 +552,7 @@
             </tr>
           </thead>
           <tbody id="tradesBody">
-            <tr><td colspan="9" class="empty-state">Sin compras registradas</td></tr>
+            <tr><td colspan="10" class="empty-state">Sin operaciones registradas</td></tr>
           </tbody>
         </table>
       </div>
@@ -554,11 +605,491 @@
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  CONFIG — Reemplazá este valor con tu Google OAuth Client ID
+//  CONFIG
 // ═══════════════════════════════════════════════════════
 const GOOGLE_CLIENT_ID = '176785335670-isvhha97k2dhpu38n7pgi2npkrp8cab9.apps.googleusercontent.com';
 const DRIVE_FILE_NAME  = 'btc-tracker-data.json';
 const SCOPES           = 'https://www.googleapis.com/auth/drive.appdata';
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let trades      = [];   // [{id, date, qty, price, type: 'buy'|'sell'}]
+let btcPrice    = null;
+let btcChange   = null;
+let tokenClient = null;
+let accessToken = null;
+let driveFileId = null;
+let chart       = null;
+let currentType = 'buy';
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+window.onload = async () => {
+  setTodayDate();
+  await loadPrice();
+  setInterval(loadPrice, 30000);
+
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = initGIS;
+  document.head.appendChild(s);
+};
+
+function setTodayDate() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('inDate').value = today;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TYPE TOGGLE
+// ═══════════════════════════════════════════════════════
+function setType(type) {
+  currentType = type;
+  document.getElementById('typeBuy').className  = 'type-btn buy'  + (type === 'buy'  ? ' active' : '');
+  document.getElementById('typeSell').className = 'type-btn sell' + (type === 'sell' ? ' active' : '');
+  const btn = document.getElementById('btnAdd');
+  if (type === 'buy') {
+    btn.textContent = '+ Agregar compra';
+    btn.className   = 'btn-add';
+  } else {
+    btn.textContent = '− Agregar venta';
+    btn.className   = 'btn-add sell';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  PRICE — CoinGecko
+// ═══════════════════════════════════════════════════════
+async function loadPrice() {
+  try {
+    const r = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+      { cache: 'no-store' }
+    );
+    const d = await r.json();
+    btcPrice  = d.bitcoin.usd;
+    btcChange = d.bitcoin.usd_24h_change;
+
+    document.getElementById('livePrice').textContent =
+      '$' + btcPrice.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+    const chEl = document.getElementById('priceChange24h');
+    chEl.style.display = '';
+    const sign = btcChange >= 0 ? '+' : '';
+    chEl.textContent = sign + btcChange.toFixed(2) + '%';
+    chEl.className = 'price-change ' + (btcChange >= 0 ? 'up' : 'down');
+
+    const now = new Date();
+    document.getElementById('lastUpdate').textContent =
+      'Actualizado ' + now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+    renderAll();
+  } catch(e) {
+    console.warn('Price fetch failed:', e);
+    document.getElementById('lastUpdate').textContent = 'Error al actualizar precio';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════
+function initGIS() {
+  if (!window.google) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { toast('Error de autenticación: ' + resp.error, 'error'); return; }
+      accessToken = resp.access_token;
+      const expiresAt = Date.now() + 3500 * 1000;
+      sessionStorage.setItem('btc_token', accessToken);
+      sessionStorage.setItem('btc_token_exp', expiresAt);
+      updateAuthUI(true);
+      toast('Google Drive conectado ✓', 'success');
+      await loadFromDrive();
+    }
+  });
+
+  // Restaurar token si sigue vigente (F5)
+  const savedToken = sessionStorage.getItem('btc_token');
+  const savedExp   = parseInt(sessionStorage.getItem('btc_token_exp') || '0');
+  if (savedToken && Date.now() < savedExp) {
+    accessToken = savedToken;
+    updateAuthUI(true);
+    loadFromDrive();
+  } else {
+    // Intentar renovar sin popup
+    tokenClient.requestAccessToken({ prompt: '' });
+  }
+}
+
+function handleAuth() {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+    accessToken = null;
+    driveFileId = null;
+    sessionStorage.removeItem('btc_token');
+    sessionStorage.removeItem('btc_token_exp');
+    updateAuthUI(false);
+    toast('Sesión cerrada');
+    return;
+  }
+  if (!tokenClient) {
+    toast('Client ID no configurado, usando modo local', 'error');
+    loadFromLocalStorage();
+    return;
+  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function updateAuthUI(signedIn) {
+  const btn = document.getElementById('authBtn');
+  btn.className = signedIn ? 'signed-in' : '';
+  document.getElementById('authIcon').textContent  = signedIn ? '●' : '○';
+  document.getElementById('authLabel').textContent = signedIn ? 'Google conectado' : 'Conectar Google';
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRIVE
+// ═══════════════════════════════════════════════════════
+async function saveToDrive() {
+  if (!accessToken) { saveToLocalStorage(); return; }
+  const body = JSON.stringify({ trades });
+  if (driveFileId) {
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body
+    });
+  } else {
+    const meta = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: DRIVE_FILE_NAME, parents: ['appDataFolder'] })
+    }).then(r => r.json());
+    driveFileId = meta.id;
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body
+    });
+  }
+}
+
+async function loadFromDrive() {
+  if (!accessToken) { loadFromLocalStorage(); return; }
+  try {
+    const list = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'`,
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    ).then(r => r.json());
+
+    if (list.files && list.files.length > 0) {
+      driveFileId = list.files[0].id;
+      const content = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`,
+        { headers: { Authorization: 'Bearer ' + accessToken } }
+      ).then(r => r.json());
+      trades = content.trades || [];
+      toast('Datos cargados desde Drive ✓', 'success');
+    } else {
+      trades = [];
+    }
+    renderAll();
+  } catch(e) {
+    console.warn('Drive load error:', e);
+    toast('Error al cargar desde Drive', 'error');
+  }
+}
+
+function saveToLocalStorage() {
+  localStorage.setItem('btcTrades', JSON.stringify(trades));
+}
+
+function loadFromLocalStorage() {
+  const raw = localStorage.getItem('btcTrades');
+  if (raw) { try { trades = JSON.parse(raw); } catch(e) {} }
+  renderAll();
+}
+
+if (GOOGLE_CLIENT_ID === 'TU_CLIENT_ID_AQUI.apps.googleusercontent.com') {
+  setTimeout(loadFromLocalStorage, 300);
+}
+
+// ═══════════════════════════════════════════════════════
+//  TRADES CRUD
+// ═══════════════════════════════════════════════════════
+function addTrade() {
+  const date  = document.getElementById('inDate').value;
+  const qty   = parseFloat(document.getElementById('inQty').value);
+  const price = parseFloat(document.getElementById('inPrice').value);
+
+  if (!date || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+    toast('Completá todos los campos correctamente', 'error'); return;
+  }
+
+  // Validate: can't sell more than you have
+  if (currentType === 'sell') {
+    const { totalQty } = calcRawStats();
+    if (qty > totalQty) {
+      toast('No podés vender más BTC del que tenés', 'error'); return;
+    }
+  }
+
+  trades.push({ id: Date.now(), date, qty, price, type: currentType });
+  trades.sort((a,b) => a.date.localeCompare(b.date));
+
+  document.getElementById('inQty').value   = '';
+  document.getElementById('inPrice').value = '';
+
+  saveToDrive();
+  renderAll();
+  toast(currentType === 'buy' ? 'Compra registrada ✓' : 'Venta registrada ✓', 'success');
+}
+
+function deleteTrade(id) {
+  trades = trades.filter(t => t.id !== id);
+  saveToDrive();
+  renderAll();
+  toast('Operación eliminada');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CALCULATIONS
+// ═══════════════════════════════════════════════════════
+function calcRawStats() {
+  let totalQty  = 0;
+  let totalCost = 0;
+  trades.forEach(t => {
+    // Backward compat: old entries had buyPrice instead of price, and no type
+    const type  = t.type || 'buy';
+    const price = t.price || t.buyPrice || 0;
+    if (type === 'buy') {
+      totalQty  += t.qty;
+      totalCost += t.qty * price;
+    } else {
+      totalQty  -= t.qty;
+      // selling doesn't reduce cost basis (FIFO not needed for PPC display)
+    }
+  });
+  return { totalQty: Math.max(0, totalQty), totalCost };
+}
+
+function calcStats() {
+  if (trades.length === 0) return null;
+
+  const { totalQty, totalCost } = calcRawStats();
+
+  if (totalQty <= 0) return { totalQty: 0, totalCost, ppc: 0, currentVal: 0, pnlUSD: null, pnlPct: null };
+
+  const ppc        = totalCost / totalQty;
+  const currentVal = btcPrice ? totalQty * btcPrice : null;
+  const pnlUSD     = currentVal !== null ? currentVal - totalCost : null;
+  const pnlPct     = pnlUSD    !== null ? (pnlUSD / totalCost) * 100 : null;
+
+  return { totalQty, totalCost, ppc, currentVal, pnlUSD, pnlPct };
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function renderAll() {
+  renderStats();
+  renderTable();
+  renderChart();
+}
+
+const fmt = (n, dec=2) => n != null
+  ? n.toLocaleString('en-US', {minimumFractionDigits:dec, maximumFractionDigits:dec})
+  : '—';
+
+function renderStats() {
+  const s = calcStats();
+  if (!s) {
+    ['statPosition','statPPC','statPnlUSD','statPnlPct'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = '—';
+      el.className = 'stat-value';
+    });
+    return;
+  }
+
+  const posEl = document.getElementById('statPosition');
+  posEl.className = 'stat-value accent';
+  if (s.currentVal != null) {
+    posEl.innerHTML = fmt(s.totalQty, 6) + ' BTC<br><span style="font-size:12px;color:var(--muted)">'
+      + '$' + fmt(s.currentVal) + '</span>';
+  } else {
+    posEl.textContent = fmt(s.totalQty, 6) + ' BTC';
+  }
+
+  document.getElementById('statPPC').textContent = s.totalQty > 0 ? '$' + fmt(s.ppc) : '—';
+  document.getElementById('statPPC').className   = 'stat-value';
+
+  const pnlUSDEl = document.getElementById('statPnlUSD');
+  const pnlPctEl = document.getElementById('statPnlPct');
+
+  if (s.pnlUSD != null && s.totalQty > 0) {
+    const sign = s.pnlUSD >= 0 ? '+' : '';
+    pnlUSDEl.textContent = sign + '$' + fmt(s.pnlUSD);
+    pnlUSDEl.className   = 'stat-value ' + (s.pnlUSD >= 0 ? 'positive' : 'negative');
+    pnlPctEl.textContent = sign + fmt(s.pnlPct) + '%';
+    pnlPctEl.className   = 'stat-value ' + (s.pnlPct >= 0 ? 'positive' : 'negative');
+  } else {
+    pnlUSDEl.textContent = '—'; pnlUSDEl.className = 'stat-value';
+    pnlPctEl.textContent = '—'; pnlPctEl.className = 'stat-value';
+  }
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tradesBody');
+
+  if (trades.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin operaciones registradas</td></tr>';
+    return;
+  }
+
+  let runQty  = 0;
+  let runCost = 0;
+
+  tbody.innerHTML = trades.map(t => {
+    const type  = t.type || 'buy';
+    const price = t.price || t.buyPrice || 0;
+    const total = t.qty * price;
+
+    if (type === 'buy') {
+      runQty  += t.qty;
+      runCost += total;
+    } else {
+      runQty  -= t.qty;
+    }
+
+    const curVal   = btcPrice && runQty > 0 ? runQty * btcPrice : null;
+    const pnl      = curVal != null ? curVal - runCost : null;
+    const pnlPct   = pnl != null && runCost > 0 ? (pnl / runCost) * 100 : null;
+    const sign     = pnl != null && pnl >= 0 ? '+' : '';
+    const pnlClass = pnl != null ? (pnl >= 0 ? 'td-positive' : 'td-negative') : '';
+
+    const badge = type === 'buy'
+      ? '<span class="badge badge-buy">compra</span>'
+      : '<span class="badge badge-sell">venta</span>';
+
+    return `<tr>
+      <td>${t.date}</td>
+      <td>${badge}</td>
+      <td>${fmt(t.qty, 6)}</td>
+      <td class="${type === 'buy' ? 'td-accent' : 'td-negative'}">$${fmt(price)}</td>
+      <td>$${fmt(total)}</td>
+      <td>${btcPrice ? '$' + fmt(btcPrice) : '—'}</td>
+      <td>${curVal != null ? '$' + fmt(curVal) : '—'}</td>
+      <td class="${pnlClass}">${pnl != null ? sign + '$' + fmt(pnl) : '—'}</td>
+      <td class="${pnlClass}">${pnlPct != null ? sign + fmt(pnlPct) + '%' : '—'}</td>
+      <td><button class="btn-del" onclick="deleteTrade(${t.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderChart() {
+  const canvas  = document.getElementById('myChart');
+  const emptyEl = document.getElementById('chartEmpty');
+
+  const buys = trades.filter(t => (t.type || 'buy') === 'buy');
+  if (buys.length === 0 || !btcPrice) {
+    if (chart) { chart.destroy(); chart = null; }
+    canvas.style.display  = 'none';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+
+  canvas.style.display  = '';
+  emptyEl.style.display = 'none';
+
+  const points = buildChartData();
+  if (chart) chart.destroy();
+
+  chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: points.map(p => p.date),
+      datasets: [{
+        label: 'Valor posición (USD)',
+        data: points.map(p => p.value),
+        borderColor: '#f7931a',
+        backgroundColor: 'rgba(247,147,26,0.08)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#f7931a',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#18181f',
+          borderColor: '#2a2a3a',
+          borderWidth: 1,
+          titleFont: { family: 'Space Mono', size: 10 },
+          bodyFont:  { family: 'Space Mono', size: 12 },
+          callbacks: {
+            label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid:  { color: 'rgba(42,42,58,0.5)' },
+          ticks: { color: '#6b6b80', font: { family: 'Space Mono', size: 9 }, maxRotation: 0 }
+        },
+        y: {
+          grid:  { color: 'rgba(42,42,58,0.5)' },
+          ticks: {
+            color: '#6b6b80',
+            font: { family: 'Space Mono', size: 9 },
+            callback: v => '$' + (v/1000).toFixed(0) + 'k'
+          }
+        }
+      }
+    }
+  });
+}
+
+function buildChartData() {
+  let runQty = 0;
+  const points = [];
+
+  trades.forEach(t => {
+    const type = t.type || 'buy';
+    if (type === 'buy') runQty += t.qty;
+    else                runQty -= t.qty;
+    runQty = Math.max(0, runQty);
+    points.push({ date: t.date, value: parseFloat((runQty * btcPrice).toFixed(2)) });
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+  if (points.length > 0 && points[points.length-1].date !== today) {
+    points.push({ date: today, value: parseFloat((runQty * btcPrice).toFixed(2)) });
+  }
+
+  return points;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2800);
+}
 
 // ═══════════════════════════════════════════════════════
 //  STATE
