@@ -860,21 +860,37 @@ function deleteTrade(id) {
 //  CALCULATIONS
 // ═══════════════════════════════════════════════════════
 function calcRawStats() {
-  let totalQty  = 0;
+  // FIFO cost basis: sales remove the oldest units at their original cost
+  let inventory = []; // [{qty, price}] in order
   let totalCost = 0;
+
   trades.forEach(t => {
-    // Backward compat: old entries had buyPrice instead of price, and no type
     const type  = t.type || 'buy';
     const price = t.price || t.buyPrice || 0;
+
     if (type === 'buy') {
-      totalQty  += t.qty;
+      inventory.push({ qty: t.qty, price });
       totalCost += t.qty * price;
     } else {
-      totalQty  -= t.qty;
-      // selling doesn't reduce cost basis (FIFO not needed for PPC display)
+      // Remove sold qty from inventory FIFO and reduce cost basis
+      let remaining = t.qty;
+      while (remaining > 0 && inventory.length > 0) {
+        const lot = inventory[0];
+        if (lot.qty <= remaining) {
+          totalCost -= lot.qty * lot.price;
+          remaining -= lot.qty;
+          inventory.shift();
+        } else {
+          totalCost -= remaining * lot.price;
+          lot.qty   -= remaining;
+          remaining  = 0;
+        }
+      }
     }
   });
-  return { totalQty: Math.max(0, totalQty), totalCost };
+
+  const totalQty = inventory.reduce((s, l) => s + l.qty, 0);
+  return { totalQty: Math.max(0, totalQty), totalCost: Math.max(0, totalCost) };
 }
 
 function calcStats() {
