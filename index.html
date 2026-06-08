@@ -392,6 +392,97 @@
 
   .btn-del:hover { border-color: var(--red); color: var(--red); }
 
+  .btn-edit {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: var(--mono);
+    transition: all 0.15s;
+    margin-right: 4px;
+  }
+
+  .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── EDIT MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .modal-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .modal .field { margin-bottom: 14px; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .btn-save {
+    flex: 1;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-save:hover { background: var(--accent2); }
+
+  .btn-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
   .empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -686,6 +777,36 @@
           "support_host": "https://www.tradingview.com"
         }
         </script>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <div class="modal-title">Editar operación</div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="editDate">
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <div class="type-toggle" style="margin-bottom:0">
+          <button class="type-btn buy active" id="editTypeBuy"  onclick="setEditType('buy')">▲ Compra</button>
+          <button class="type-btn sell"        id="editTypeSell" onclick="setEditType('sell')">▼ Venta</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Cantidad BTC</label>
+        <input type="number" id="editQty" step="any" min="0">
+      </div>
+      <div class="field">
+        <label>Precio USD/BTC</label>
+        <input type="number" id="editPrice" step="any" min="0">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+        <button class="btn-save"   onclick="saveEdit()">Guardar</button>
       </div>
     </div>
   </div>
@@ -1108,7 +1229,10 @@ function renderTable() {
       <td>${curVal != null ? '$' + fmt(curVal) : '—'}</td>
       <td class="${pnlClass}">${pnl != null ? sign + '$' + fmt(pnl) : '—'}</td>
       <td class="${pnlClass}">${pnlPct != null ? sign + fmt(pnlPct) + '%' : '—'}</td>
-      <td><button class="btn-del" onclick="deleteTrade(${t.id})">✕</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn-edit" onclick="openEditModal(${t.id})">✎</button>
+        <button class="btn-del"  onclick="deleteTrade(${t.id})">✕</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -1200,6 +1324,64 @@ function buildChartData() {
 
   return points;
 }
+
+// ═══════════════════════════════════════════════════════
+//  EDIT MODAL
+// ═══════════════════════════════════════════════════════
+let editingId   = null;
+let editingType = 'buy';
+
+function openEditModal(id) {
+  const t = trades.find(x => x.id === id);
+  if (!t) return;
+  editingId   = id;
+  editingType = t.type || 'buy';
+
+  document.getElementById('editDate').value  = t.date;
+  document.getElementById('editQty').value   = t.qty;
+  document.getElementById('editPrice').value = t.price || t.buyPrice || '';
+  setEditType(editingType);
+
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  editingId = null;
+}
+
+function setEditType(type) {
+  editingType = type;
+  document.getElementById('editTypeBuy').className  = 'type-btn buy'  + (type === 'buy'  ? ' active' : '');
+  document.getElementById('editTypeSell').className = 'type-btn sell' + (type === 'sell' ? ' active' : '');
+}
+
+function saveEdit() {
+  const date  = document.getElementById('editDate').value;
+  const qty   = parseFloat(document.getElementById('editQty').value);
+  const price = parseFloat(document.getElementById('editPrice').value);
+
+  if (!date || isNaN(qty) || qty <= 0 || isNaN(price) || price <= 0) {
+    toast('Completá todos los campos correctamente', 'error'); return;
+  }
+
+  const idx = trades.findIndex(x => x.id === editingId);
+  if (idx === -1) return;
+
+  trades[idx] = { ...trades[idx], date, qty, price, type: editingType };
+  trades.sort((a,b) => a.date.localeCompare(b.date));
+
+  closeEditModal();
+  saveToDrive();
+  renderAll();
+  toast('Operación actualizada ✓', 'success');
+}
+
+// Close modal clicking outside
+document.addEventListener('click', e => {
+  const modal = document.getElementById('editModal');
+  if (modal && e.target === modal) closeEditModal();
+});
 
 // ═══════════════════════════════════════════════════════
 //  NEWS — Claude API
