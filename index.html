@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BTC Tracker</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f7931a'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='Arial Black%2C sans-serif' font-weight='900' font-size='20' fill='%23fff'%3E%E2%82%BF%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -339,7 +338,6 @@
 
   table {
     width: 100%;
-    min-width: 760px;
     border-collapse: collapse;
     font-family: var(--mono);
     font-size: 11px;
@@ -744,6 +742,9 @@
         </table>
       </div>
     </div>
+    <div style="text-align:center;margin-top:12px;">
+      <button class="btn-refresh" id="btnVerMas" onclick="verMas()" style="display:none;padding:8px 24px;font-size:10px;">Ver más</button>
+    </div>
   </div>
 
   <!-- PORTFOLIO CHART -->
@@ -1067,6 +1068,7 @@ function addTrade() {
     }
   }
 
+  visibleRows = 5;
   trades.push({ id: Date.now(), date, qty, price, type: currentType });
   trades.sort((a,b) => a.date.localeCompare(b.date));
 
@@ -1079,6 +1081,7 @@ function addTrade() {
 }
 
 function deleteTrade(id) {
+  visibleRows = 5;
   trades = trades.filter(t => t.id !== id);
   saveToDrive();
   renderAll();
@@ -1089,9 +1092,8 @@ function deleteTrade(id) {
 //  CALCULATIONS
 // ═══════════════════════════════════════════════════════
 function calcRawStats() {
-  // CPP continuo (costo promedio ponderado):
-  // al vender, se reduce el costo proporcionalmente al PPC del momento
-  let totalQty  = 0;
+  // FIFO cost basis: sales remove the oldest units at their original cost
+  let inventory = []; // [{qty, price}] in order
   let totalCost = 0;
 
   trades.forEach(t => {
@@ -1099,18 +1101,27 @@ function calcRawStats() {
     const price = t.price || t.buyPrice || 0;
 
     if (type === 'buy') {
-      totalQty  += t.qty;
+      inventory.push({ qty: t.qty, price });
       totalCost += t.qty * price;
     } else {
-      if (totalQty > 0) {
-        const ppcActual    = totalCost / totalQty;
-        const costoVendido = t.qty * ppcActual;
-        totalQty  -= t.qty;
-        totalCost -= costoVendido;
+      // Remove sold qty from inventory FIFO and reduce cost basis
+      let remaining = t.qty;
+      while (remaining > 0 && inventory.length > 0) {
+        const lot = inventory[0];
+        if (lot.qty <= remaining) {
+          totalCost -= lot.qty * lot.price;
+          remaining -= lot.qty;
+          inventory.shift();
+        } else {
+          totalCost -= remaining * lot.price;
+          lot.qty   -= remaining;
+          remaining  = 0;
+        }
       }
     }
   });
 
+  const totalQty = inventory.reduce((s, l) => s + l.qty, 0);
   return { totalQty: Math.max(0, totalQty), totalCost: Math.max(0, totalCost) };
 }
 
@@ -1141,6 +1152,18 @@ function renderAll() {
 const fmt = (n, dec=2) => n != null
   ? n.toLocaleString('en-US', {minimumFractionDigits:dec, maximumFractionDigits:dec})
   : '—';
+
+const fmtBTC = (n) => {
+  if (n == null) return '—';
+  // Up to 6 decimals, strip trailing zeros
+  return parseFloat(n.toFixed(6)).toString();
+};
+
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+};
 
 function renderStats() {
   const s = calcStats();
@@ -1180,32 +1203,44 @@ function renderStats() {
   }
 }
 
+let visibleRows = 5;
+
 function renderTable() {
   const tbody = document.getElementById('tradesBody');
+  const btnMore = document.getElementById('btnVerMas');
 
   if (trades.length === 0) {
     tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin operaciones registradas</td></tr>';
+    if (btnMore) btnMore.style.display = 'none';
     return;
   }
 
+  // Show newest first
+  const reversed = [...trades].reverse();
+  const visible  = reversed.slice(0, visibleRows);
+
+  // We need cumulative stats per row — recalculate in original order
+  // Build a map of id -> cumulative stats at that point
   let runQty  = 0;
   let runCost = 0;
+  const statsMap = {};
+  trades.forEach(t => {
+    const type  = t.type || 'buy';
+    const price = t.price || t.buyPrice || 0;
+    if (type === 'buy') { runQty += t.qty; runCost += t.qty * price; }
+    else                { runQty -= t.qty; }
+    statsMap[t.id] = { runQty: Math.max(0, runQty), runCost };
+  });
 
-  tbody.innerHTML = trades.map(t => {
+  tbody.innerHTML = visible.map(t => {
     const type  = t.type || 'buy';
     const price = t.price || t.buyPrice || 0;
     const total = t.qty * price;
+    const s     = statsMap[t.id];
 
-    if (type === 'buy') {
-      runQty  += t.qty;
-      runCost += total;
-    } else {
-      runQty  -= t.qty;
-    }
-
-    const curVal   = btcPrice && runQty > 0 ? runQty * btcPrice : null;
-    const pnl      = curVal != null ? curVal - runCost : null;
-    const pnlPct   = pnl != null && runCost > 0 ? (pnl / runCost) * 100 : null;
+    const curVal   = btcPrice && s.runQty > 0 ? s.runQty * btcPrice : null;
+    const pnl      = curVal != null ? curVal - s.runCost : null;
+    const pnlPct   = pnl != null && s.runCost > 0 ? (pnl / s.runCost) * 100 : null;
     const sign     = pnl != null && pnl >= 0 ? '+' : '';
     const pnlClass = pnl != null ? (pnl >= 0 ? 'td-positive' : 'td-negative') : '';
 
@@ -1214,9 +1249,9 @@ function renderTable() {
       : '<span class="badge badge-sell">venta</span>';
 
     return `<tr>
-      <td>${t.date}</td>
+      <td>${fmtDate(t.date)}</td>
       <td>${badge}</td>
-      <td>${fmt(t.qty, 6)}</td>
+      <td>${fmtBTC(t.qty)}</td>
       <td class="${type === 'buy' ? 'td-accent' : 'td-negative'}">$${fmt(price)}</td>
       <td>$${fmt(total)}</td>
       <td>${btcPrice ? '$' + fmt(btcPrice) : '—'}</td>
@@ -1229,6 +1264,20 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
+
+  if (btnMore) {
+    if (visibleRows < trades.length) {
+      btnMore.style.display = '';
+      btnMore.textContent   = `Ver más (${trades.length - visibleRows} restantes)`;
+    } else {
+      btnMore.style.display = 'none';
+    }
+  }
+}
+
+function verMas() {
+  visibleRows += 10;
+  renderTable();
 }
 
 function renderChart() {
@@ -1291,10 +1340,7 @@ function renderChart() {
           ticks: {
             color: '#6b6b80',
             font: { family: 'Space Mono', size: 9 },
-            callback: v => {
-              if (v >= 1000) return '$' + (v/1000).toFixed(1).replace(/\.0$/,'') + 'k';
-              return '$' + v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
-            }
+            callback: v => '$' + (v/1000).toFixed(0) + 'k'
           }
         }
       }
@@ -1392,24 +1438,29 @@ async function loadNews() {
   if (btn) btn.disabled = true;
 
   try {
-    const response = await fetch('https://crimson-violet-5fa1.redchar-ps4.workers.dev/', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tools: [{ google_search: {} }],
-        contents: [{
-          role: 'user',
-          parts: [{ text: 'Buscá las 4 noticias más recientes e importantes que hayan afectado o puedan afectar el precio de Bitcoin. Retorná SOLO un JSON array sin texto adicional, sin markdown, sin backticks. Formato exacto: [{"title":"...","date":"...","impact":"bullish|bearish|neutral","analysis":"explicación breve en español de máximo 2 oraciones de cómo afecta al precio de BTC"}]. La fecha en formato DD/MM/YYYY.' }]
-        }]
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: 'Eres un analista de criptomonedas. Buscá las 4 noticias más recientes e importantes que hayan afectado o puedan afectar al precio de Bitcoin. Para cada noticia retorná SOLO un JSON array sin texto adicional, sin markdown, sin backticks. Formato exacto: [{"title":"...","date":"...","impact":"bullish|bearish|neutral","analysis":"explicación breve en español de máximo 2 oraciones de cómo afecta al precio de BTC"}]. La fecha en formato DD/MM/YYYY.',
+        messages: [{ role: 'user', content: 'Dame las 4 noticias más recientes que afectaron o pueden afectar el precio de Bitcoin. Buscalas en internet primero.' }]
       })
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Worker error');
 
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const match = clean.match(/\[[\s\S]*\]/);
+    // Extract text from response
+    const textBlock = data.content && data.content.find(b => b.type === 'text');
+    if (!textBlock) throw new Error('No text in response');
+
+    let raw = textBlock.text.trim();
+    // Strip possible markdown fences
+    raw = raw.replace(/```json|```/g, '').trim();
+    // Extract JSON array
+    const match = raw.match(/\[[\s\S]*\]/);
     if (!match) throw new Error('No JSON array found');
 
     const news = JSON.parse(match[0]);
