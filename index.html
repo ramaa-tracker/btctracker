@@ -729,10 +729,6 @@
               <th>Cantidad BTC</th>
               <th>Precio op.</th>
               <th>Total USD</th>
-              <th>Precio actual</th>
-              <th>Val. actual</th>
-              <th>P&amp;L USD</th>
-              <th>P&amp;L %</th>
               <th></th>
             </tr>
           </thead>
@@ -1210,7 +1206,7 @@ function renderTable() {
   const btnMore = document.getElementById('btnVerMas');
 
   if (trades.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Sin operaciones registradas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Sin operaciones registradas</td></tr>';
     if (btnMore) btnMore.style.display = 'none';
     return;
   }
@@ -1219,30 +1215,10 @@ function renderTable() {
   const reversed = [...trades].reverse();
   const visible  = reversed.slice(0, visibleRows);
 
-  // We need cumulative stats per row — recalculate in original order
-  // Build a map of id -> cumulative stats at that point
-  let runQty  = 0;
-  let runCost = 0;
-  const statsMap = {};
-  trades.forEach(t => {
-    const type  = t.type || 'buy';
-    const price = t.price || t.buyPrice || 0;
-    if (type === 'buy') { runQty += t.qty; runCost += t.qty * price; }
-    else                { runQty -= t.qty; }
-    statsMap[t.id] = { runQty: Math.max(0, runQty), runCost };
-  });
-
   tbody.innerHTML = visible.map(t => {
     const type  = t.type || 'buy';
     const price = t.price || t.buyPrice || 0;
     const total = t.qty * price;
-    const s     = statsMap[t.id];
-
-    const curVal   = btcPrice && s.runQty > 0 ? s.runQty * btcPrice : null;
-    const pnl      = curVal != null ? curVal - s.runCost : null;
-    const pnlPct   = pnl != null && s.runCost > 0 ? (pnl / s.runCost) * 100 : null;
-    const sign     = pnl != null && pnl >= 0 ? '+' : '';
-    const pnlClass = pnl != null ? (pnl >= 0 ? 'td-positive' : 'td-negative') : '';
 
     const badge = type === 'buy'
       ? '<span class="badge badge-buy">compra</span>'
@@ -1254,10 +1230,6 @@ function renderTable() {
       <td>${fmtBTC(t.qty)}</td>
       <td class="${type === 'buy' ? 'td-accent' : 'td-negative'}">$${fmt(price)}</td>
       <td>$${fmt(total)}</td>
-      <td>${btcPrice ? '$' + fmt(btcPrice) : '—'}</td>
-      <td>${curVal != null ? '$' + fmt(curVal) : '—'}</td>
-      <td class="${pnlClass}">${pnl != null ? sign + '$' + fmt(pnl) : '—'}</td>
-      <td class="${pnlClass}">${pnlPct != null ? sign + fmt(pnlPct) + '%' : '—'}</td>
       <td style="white-space:nowrap">
         <button class="btn-edit" onclick="openEditModal(${t.id})">✎</button>
         <button class="btn-del"  onclick="deleteTrade(${t.id})">✕</button>
