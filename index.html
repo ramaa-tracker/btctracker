@@ -498,7 +498,7 @@
     border-radius: 12px;
     padding: 20px;
     position: relative;
-    min-height: 200px;
+    height: 260px;
   }
 
   #myChart { width: 100% !important; }
@@ -510,6 +510,202 @@
     border-radius: 12px;
     overflow: hidden;
     height: 400px;
+  }
+
+  /* ── TIMEFRAME BUTTONS ── */
+  .tf-btns {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tf-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .tf-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tf-btn.active { background: rgba(247,147,26,0.15); border-color: var(--accent); color: var(--accent); }
+
+  .chart-container { min-height: 220px; }
+
+  /* ── TECHNICAL ANALYSIS ── */
+  .ta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  @media(min-width: 600px) { .ta-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .ta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .ta-card:hover { border-color: rgba(247,147,26,0.3); }
+
+  .ta-card-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ta-card-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .ta-card-signal {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .signal-bull   { color: var(--green); }
+  .signal-bear   { color: var(--red); }
+  .signal-neutral{ color: var(--muted); }
+
+  .ta-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* Info button */
+  .info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    font-size: 8px;
+    cursor: pointer;
+    background: transparent;
+    font-family: var(--mono);
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    line-height: 1;
+    padding: 0;
+  }
+
+  .info-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Tooltip modal */
+  .tooltip-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .tooltip-overlay.open { display: flex; }
+
+  .tooltip-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .tooltip-title {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .tooltip-body {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .tooltip-body ul {
+    margin: 8px 0 8px 16px;
+  }
+
+  .tooltip-body li { margin-bottom: 4px; }
+
+  .tooltip-current {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(247,147,26,0.08);
+    border: 1px solid rgba(247,147,26,0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .tooltip-close {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tooltip-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .ta-loading {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
   }
 
   /* ── NEWS ── */
@@ -745,9 +941,18 @@
 
   <!-- PORTFOLIO CHART -->
   <div class="section">
-    <div class="section-title">Valor de posición en el tiempo</div>
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:10px;">Valor de posición en el tiempo<span style="height:1px;background:var(--border);display:inline-block;width:40px;"></span></span>
+      <div class="tf-btns" id="tfBtns">
+        <button class="tf-btn" onclick="setTimeframe('1M')">1M</button>
+        <button class="tf-btn" onclick="setTimeframe('3M')">3M</button>
+        <button class="tf-btn" onclick="setTimeframe('6M')">6M</button>
+        <button class="tf-btn active" onclick="setTimeframe('1A')">1A</button>
+        <button class="tf-btn" onclick="setTimeframe('MAX')">MAX</button>
+      </div>
+    </div>
     <div class="chart-container">
-      <canvas id="myChart" height="180"></canvas>
+      <canvas id="myChart"></canvas>
       <div id="chartEmpty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:11px;">Agregá compras para ver el gráfico</div>
     </div>
   </div>
@@ -810,6 +1015,27 @@
     </div>
   </div>
 
+  <!-- TOOLTIP MODAL -->
+  <div class="tooltip-overlay" id="tooltipOverlay" onclick="closeTooltip(event)">
+    <div class="tooltip-box">
+      <div class="tooltip-title" id="tooltipTitle"></div>
+      <div class="tooltip-body"  id="tooltipBody"></div>
+      <div class="tooltip-current" id="tooltipCurrent"></div>
+      <button class="tooltip-close" onclick="closeTooltip()">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- TECHNICAL ANALYSIS -->
+  <div class="section">
+    <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:10px;">Análisis técnico · BTC/USD<span style="height:1px;background:var(--border);display:inline-block;width:40px;"></span></span>
+      <button class="btn-refresh" id="btnRefreshTA" onclick="loadTA()">↻ Actualizar</button>
+    </div>
+    <div id="taContent">
+      <div class="ta-loading">Ingresá tu API key de TaAPI para ver el análisis técnico <span class="dot-pulse">·</span></div>
+    </div>
+  </div>
+
   <!-- NEWS -->
   <div class="section">
     <div class="section-title" style="justify-content:space-between;display:flex;align-items:center;">
@@ -827,6 +1053,8 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -1024,6 +1252,7 @@ async function loadFromDrive() {
       trades = [];
     }
     renderAll();
+    await loadPriceHistory();
   } catch(e) {
     console.warn('Drive load error:', e);
     toast('Error al cargar desde Drive', 'error');
@@ -1038,6 +1267,7 @@ function loadFromLocalStorage() {
   const raw = localStorage.getItem('btcTrades');
   if (raw) { try { trades = JSON.parse(raw); } catch(e) {} }
   renderAll();
+  loadPriceHistory();
 }
 
 if (GOOGLE_CLIENT_ID === 'TU_CLIENT_ID_AQUI.apps.googleusercontent.com') {
@@ -1252,12 +1482,217 @@ function verMas() {
   renderTable();
 }
 
+// ── Price history (saved to Drive) ──
+let priceHistory = {}; // { "2026-06-25": 107000, ... }
+let currentTf    = '1A';
+const PRICE_FILE = 'btc-price-history.json';
+let priceFileId  = null;
+
+// ── Load price history from Drive ──
+async function loadPriceHistory() {
+  if (!accessToken) {
+    const raw = localStorage.getItem('btcPriceHistory');
+    if (raw) try { priceHistory = JSON.parse(raw); } catch(e) {}
+    await syncPriceHistory();
+    return;
+  }
+  try {
+    const list = await fetch(
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${PRICE_FILE}'`,
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    ).then(r => r.json());
+
+    if (list.files && list.files.length > 0) {
+      priceFileId = list.files[0].id;
+      const data = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${priceFileId}?alt=media`,
+        { headers: { Authorization: 'Bearer ' + accessToken } }
+      ).then(r => r.json());
+      priceHistory = data.prices || {};
+    }
+  } catch(e) { console.warn('Price history load error:', e); }
+  await syncPriceHistory();
+}
+
+// ── Sync: fill gaps with CoinGecko + save today ──
+async function syncPriceHistory() {
+  if (!btcPrice) return;
+
+  const today = new Date().toISOString().slice(0,10);
+
+  // Find earliest trade date
+  const dates = trades.map(t => t.date).sort();
+  if (dates.length === 0) return;
+  const earliest = dates[0];
+
+  // Find missing dates in last 365 days
+  const missing = [];
+  const cutoff  = new Date();
+  cutoff.setDate(cutoff.getDate() - 364);
+  const cutoffStr = cutoff.toISOString().slice(0,10);
+  const startStr  = earliest < cutoffStr ? cutoffStr : earliest;
+
+  let cur = new Date(startStr);
+  const todayD = new Date(today);
+  while (cur <= todayD) {
+    const iso = cur.toISOString().slice(0,10);
+    if (!priceHistory[iso]) missing.push(iso);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // Always save today's price
+  priceHistory[today] = btcPrice;
+
+  // Fetch missing from CoinGecko if any (max 365 days)
+  if (missing.length > 0 && missing.length <= 365) {
+    try {
+      const r = await fetch(
+        'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily',
+        { cache: 'no-store' }
+      );
+      const d = await r.json();
+      if (d.prices) {
+        d.prices.forEach(([ts, price]) => {
+          const iso = new Date(ts).toISOString().slice(0,10);
+          if (!priceHistory[iso]) priceHistory[iso] = price;
+        });
+      }
+    } catch(e) { console.warn('CoinGecko history error:', e); }
+  }
+
+  await savePriceHistory();
+  renderChart();
+}
+
+// ── Save price history to Drive ──
+async function savePriceHistory() {
+  const body = JSON.stringify({ prices: priceHistory });
+  if (!accessToken) {
+    localStorage.setItem('btcPriceHistory', JSON.stringify(priceHistory));
+    return;
+  }
+  try {
+    if (priceFileId) {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${priceFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body
+      });
+    } else {
+      const meta = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: PRICE_FILE, parents: ['appDataFolder'] })
+      }).then(r => r.json());
+      priceFileId = meta.id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${priceFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body
+      });
+    }
+  } catch(e) { console.warn('Price history save error:', e); }
+}
+
+// ── Timeframe selector ──
+function setTimeframe(tf) {
+  currentTf = tf;
+  document.querySelectorAll('.tf-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === tf);
+  });
+  renderChart();
+}
+
+// ── Build chart data from price history ──
+function buildChartData() {
+  const today = new Date().toISOString().slice(0,10);
+
+  // Determine start date based on timeframe
+  const startDate = new Date();
+  if      (currentTf === '1M')  startDate.setMonth(startDate.getMonth() - 1);
+  else if (currentTf === '3M')  startDate.setMonth(startDate.getMonth() - 3);
+  else if (currentTf === '6M')  startDate.setMonth(startDate.getMonth() - 6);
+  else if (currentTf === '1A')  startDate.setFullYear(startDate.getFullYear() - 1);
+  else {
+    // MAX — from first trade
+    const dates = trades.map(t => t.date).sort();
+    if (dates.length > 0) startDate.setTime(new Date(dates[0]).getTime());
+    else startDate.setFullYear(startDate.getFullYear() - 1);
+  }
+  const startStr = startDate.toISOString().slice(0,10);
+
+  // Build cumulative qty for each day
+  // trades sorted by date — compute running qty at each calendar day
+  const sortedTrades = [...trades].sort((a,b) => a.date.localeCompare(b.date));
+
+  const allDates = Object.keys(priceHistory).filter(d => d >= startStr && d <= today).sort();
+  if (allDates.length === 0) return [];
+
+  const points = [];
+  let tradeIdx = 0;
+  let runQty   = 0;
+
+  // Pre-compute qty before startStr
+  sortedTrades.forEach(t => {
+    if (t.date < startStr) {
+      const type = t.type || 'buy';
+      if (type === 'buy') runQty += t.qty;
+      else                runQty -= t.qty;
+      runQty = Math.max(0, runQty);
+    }
+  });
+  tradeIdx = sortedTrades.filter(t => t.date < startStr).length;
+
+  allDates.forEach(date => {
+    // Apply all trades on this date
+    while (tradeIdx < sortedTrades.length && sortedTrades[tradeIdx].date <= date) {
+      const t    = sortedTrades[tradeIdx];
+      const type = t.type || 'buy';
+      if (type === 'buy') runQty += t.qty;
+      else                runQty -= t.qty;
+      runQty = Math.max(0, runQty);
+      tradeIdx++;
+    }
+
+    const price = priceHistory[date];
+    if (price && runQty > 0) {
+      points.push({ date, value: parseFloat((runQty * price).toFixed(2)) });
+    }
+  });
+
+  return points;
+}
+
+// ── Format Y axis ──
+function fmtY(v) {
+  if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+  if (v >= 1000)    return '$' + (v/1000).toFixed(1) + 'k';
+  return '$' + v.toFixed(0);
+}
+
+// ── Format X axis label based on timeframe ──
+function fmtX(iso) {
+  const [y, m, d] = iso.split('-');
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  if (currentTf === '1M') return `${d} ${months[+m-1]}`;
+  if (currentTf === 'MAX' || currentTf === '1A' || currentTf === '6M') return `${months[+m-1]} ${y.slice(2)}`;
+  return `${d} ${months[+m-1]}`;
+}
+
 function renderChart() {
   const canvas  = document.getElementById('myChart');
   const emptyEl = document.getElementById('chartEmpty');
 
-  const buys = trades.filter(t => (t.type || 'buy') === 'buy');
-  if (buys.length === 0 || !btcPrice) {
+  const hasTrades = trades.some(t => (t.type || 'buy') === 'buy');
+  if (!hasTrades || Object.keys(priceHistory).length === 0) {
+    if (chart) { chart.destroy(); chart = null; }
+    canvas.style.display  = 'none';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+
+  const points = buildChartData();
+  if (points.length === 0) {
     if (chart) { chart.destroy(); chart = null; }
     canvas.style.display  = 'none';
     emptyEl.style.display = 'flex';
@@ -1267,27 +1702,36 @@ function renderChart() {
   canvas.style.display  = '';
   emptyEl.style.display = 'none';
 
-  const points = buildChartData();
+  // Thin out points for performance on large datasets
+  const maxPoints = 200;
+  let displayed = points;
+  if (points.length > maxPoints) {
+    const step = Math.ceil(points.length / maxPoints);
+    displayed = points.filter((_, i) => i % step === 0 || i === points.length - 1);
+  }
+
   if (chart) chart.destroy();
 
   chart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: points.map(p => p.date),
+      labels: displayed.map(p => fmtX(p.date)),
       datasets: [{
         label: 'Valor posición (USD)',
-        data: points.map(p => p.value),
+        data: displayed.map(p => p.value),
         borderColor: '#f7931a',
-        backgroundColor: 'rgba(247,147,26,0.08)',
+        backgroundColor: 'rgba(247,147,26,0.06)',
         borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: '#f7931a',
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: '#f7931a',
         fill: true,
-        tension: 0.4
+        tension: 0.3
       }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
@@ -1298,46 +1742,36 @@ function renderChart() {
           titleFont: { family: 'Space Mono', size: 10 },
           bodyFont:  { family: 'Space Mono', size: 12 },
           callbacks: {
-            label: ctx => ' $' + ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})
+            title: items => displayed[items[0].dataIndex]?.date || items[0].label,
+            label: ctx  => ' ' + fmtY(ctx.parsed.y)
           }
+        },
+        zoom: {
+          pan:  { enabled: true,  mode: 'x' },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
         }
       },
       scales: {
         x: {
-          grid:  { color: 'rgba(42,42,58,0.5)' },
-          ticks: { color: '#6b6b80', font: { family: 'Space Mono', size: 9 }, maxRotation: 0 }
-        },
-        y: {
-          grid:  { color: 'rgba(42,42,58,0.5)' },
+          grid:  { color: 'rgba(42,42,58,0.4)' },
           ticks: {
             color: '#6b6b80',
-            font: { family: 'Space Mono', size: 9 },
-            callback: v => '$' + (v/1000).toFixed(0) + 'k'
+            font:  { family: 'Space Mono', size: 9 },
+            maxRotation: 0,
+            maxTicksLimit: 8
+          }
+        },
+        y: {
+          grid:  { color: 'rgba(42,42,58,0.4)' },
+          ticks: {
+            color: '#6b6b80',
+            font:  { family: 'Space Mono', size: 9 },
+            callback: fmtY
           }
         }
       }
     }
   });
-}
-
-function buildChartData() {
-  let runQty = 0;
-  const points = [];
-
-  trades.forEach(t => {
-    const type = t.type || 'buy';
-    if (type === 'buy') runQty += t.qty;
-    else                runQty -= t.qty;
-    runQty = Math.max(0, runQty);
-    points.push({ date: t.date, value: parseFloat((runQty * btcPrice).toFixed(2)) });
-  });
-
-  const today = new Date().toISOString().slice(0,10);
-  if (points.length > 0 && points[points.length-1].date !== today) {
-    points.push({ date: today, value: parseFloat((runQty * btcPrice).toFixed(2)) });
-  }
-
-  return points;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1397,6 +1831,227 @@ document.addEventListener('click', e => {
   const modal = document.getElementById('editModal');
   if (modal && e.target === modal) closeEditModal();
 });
+
+// ═══════════════════════════════════════════════════════
+//  TECHNICAL ANALYSIS — TaAPI.io
+// ═══════════════════════════════════════════════════════
+const TAAPI_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbHVlIjoiNmEzZTVmNzg5MzEwZjViOGU2OWUyZTU0IiwiaWF0IjoxNzgyNDcyNTY4LCJleHAiOjMzMjg2OTM2NTY4fQ.HTQL8gasaFu94yyMq0_Wj9wQEf9ySqjHayit0Zp6_YM'; // reemplazá con tu key de taapi.io
+
+const TA_INFO = {
+  rsi: {
+    title: 'RSI — Índice de Fuerza Relativa',
+    body: `Mide la velocidad y magnitud de los movimientos de precio para detectar si un activo está sobrecomprado o sobrevendido.<ul>
+      <li><b>Por encima de 70</b> → sobrecomprado (posible corrección)</li>
+      <li><b>Entre 30 y 70</b> → zona neutral</li>
+      <li><b>Por debajo de 30</b> → sobrevendido (posible rebote)</li>
+    </ul>`,
+    interpret: (v) => {
+      if (v >= 70) return `RSI en ${v.toFixed(1)} → sobrecomprado. El precio subió rápido y podría corregir.`;
+      if (v <= 30) return `RSI en ${v.toFixed(1)} → sobrevendido. El precio cayó fuerte y podría rebotar.`;
+      if (v >= 55) return `RSI en ${v.toFixed(1)} → momentum alcista moderado, sin señal de sobrecompra aún.`;
+      if (v <= 45) return `RSI en ${v.toFixed(1)} → momentum bajista moderado, sin señal de sobrevendido aún.`;
+      return `RSI en ${v.toFixed(1)} → zona neutral, sin señal clara de dirección.`;
+    }
+  },
+  macd: {
+    title: 'MACD — Convergencia/Divergencia de Medias',
+    body: `Indicador de tendencia que muestra la relación entre dos medias móviles exponenciales.<ul>
+      <li><b>MACD > Signal</b> → señal alcista (momentum positivo)</li>
+      <li><b>MACD < Signal</b> → señal bajista (momentum negativo)</li>
+      <li><b>Histograma positivo</b> → la divergencia alcista está creciendo</li>
+      <li><b>Cruce reciente</b> → posible cambio de tendencia</li>
+    </ul>`,
+    interpret: (macd, signal, hist) => {
+      const dir = macd > signal ? 'alcista' : 'bajista';
+      const histDir = hist > 0 ? 'positivo (momentum creciente)' : 'negativo (momentum decreciente)';
+      return `MACD ${macd.toFixed(0)} vs Signal ${signal.toFixed(0)} → señal ${dir}. Histograma ${histDir}.`;
+    }
+  },
+  ma: {
+    title: 'Medias Móviles (MA50 y MA200)',
+    body: `Promedian el precio durante N días para suavizar el ruido y mostrar la tendencia.<ul>
+      <li><b>Precio > MA200</b> → tendencia alcista de largo plazo</li>
+      <li><b>Precio < MA200</b> → tendencia bajista de largo plazo</li>
+      <li><b>MA50 cruza MA200 hacia arriba</b> → "Golden Cross" señal muy alcista</li>
+      <li><b>MA50 cruza MA200 hacia abajo</b> → "Death Cross" señal muy bajista</li>
+    </ul>`,
+    interpret: (price, ma50, ma200) => {
+      const aboveMA200 = price > ma200;
+      const aboveMA50  = price > ma50;
+      const golden     = ma50 > ma200;
+      let txt = aboveMA200
+        ? `Precio sobre MA200 ($${Math.round(ma200).toLocaleString()}) → tendencia alcista de largo plazo.`
+        : `Precio bajo MA200 ($${Math.round(ma200).toLocaleString()}) → tendencia bajista de largo plazo.`;
+      txt += golden
+        ? ` MA50 sobre MA200 (Golden Cross activo).`
+        : ` MA50 bajo MA200 (Death Cross activo).`;
+      return txt;
+    }
+  },
+  bbands: {
+    title: 'Bandas de Bollinger',
+    body: `Miden la volatilidad del mercado con una banda superior, media e inferior.<ul>
+      <li><b>Precio toca banda superior</b> → posible sobrecompra o breakout alcista</li>
+      <li><b>Precio toca banda inferior</b> → posible sobrevendido o breakout bajista</li>
+      <li><b>Bandas estrechas</b> → baja volatilidad, suele preceder un movimiento fuerte</li>
+      <li><b>Bandas anchas</b> → alta volatilidad, mercado en movimiento</li>
+    </ul>`,
+    interpret: (price, upper, lower, mid) => {
+      const width = ((upper - lower) / mid * 100).toFixed(1);
+      if (price > upper * 0.98) return `Precio cerca de la banda superior ($${Math.round(upper).toLocaleString()}) → posible sobrecompra. Ancho de banda: ${width}%.`;
+      if (price < lower * 1.02) return `Precio cerca de la banda inferior ($${Math.round(lower).toLocaleString()}) → posible sobrevendido. Ancho de banda: ${width}%.`;
+      return `Precio dentro de las bandas. Ancho: ${width}% — volatilidad ${parseFloat(width) < 10 ? 'baja (posible movimiento próximo)' : 'moderada/alta'}.`;
+    }
+  }
+};
+
+let taData = null;
+
+async function loadTA() {
+  if (TAAPI_KEY === 'TU_TAAPI_KEY_AQUI') {
+    document.getElementById('taContent').innerHTML =
+      '<div class="ta-loading">Agregá tu API key de <a href="https://taapi.io" target="_blank" style="color:var(--accent)">taapi.io</a> en el HTML para activar el análisis técnico.</div>';
+    return;
+  }
+
+  const btn = document.getElementById('btnRefreshTA');
+  if (btn) btn.disabled = true;
+  document.getElementById('taContent').innerHTML =
+    '<div class="ta-loading">Cargando indicadores… <span class="dot-pulse">·</span></div>';
+
+  try {
+    // Bulk request to TaAPI — 1 call with multiple indicators
+    const body = {
+      secret: TAAPI_KEY,
+      construct: {
+        exchange: 'binance',
+        symbol:   'BTC/USDT',
+        interval: '1d',
+        indicators: [
+          { id: 'rsi',    indicator: 'rsi' },
+          { id: 'macd',   indicator: 'macd' },
+          { id: 'ma50',   indicator: 'sma', optInTimePeriod: 50 },
+          { id: 'ma200',  indicator: 'sma', optInTimePeriod: 200 },
+          { id: 'bbands', indicator: 'bbands' }
+        ]
+      }
+    };
+
+    const r = await fetch('https://api.taapi.io/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const d = await r.json();
+    if (d.errors && d.errors.length > 0) throw new Error(d.errors[0]);
+
+    // Parse results
+    const byId = {};
+    d.data.forEach(item => { byId[item.id] = item.result; });
+
+    taData = {
+      rsi:    byId.rsi?.value,
+      macd:   byId.macd?.valueMACD,
+      signal: byId.macd?.valueMACDSignal,
+      hist:   byId.macd?.valueMACDHist,
+      ma50:   byId.ma50?.value,
+      ma200:  byId.ma200?.value,
+      bbUpper: byId.bbands?.valueUpperBand,
+      bbMid:   byId.bbands?.valueMiddleBand,
+      bbLower: byId.bbands?.valueLowerBand,
+      price:   btcPrice
+    };
+
+    renderTA();
+  } catch(e) {
+    console.warn('TaAPI error:', e);
+    document.getElementById('taContent').innerHTML =
+      `<div class="ta-loading">Error al cargar indicadores: ${e.message || 'intentá de nuevo'}.</div>`;
+  }
+
+  if (btn) btn.disabled = false;
+}
+
+function renderTA() {
+  if (!taData) return;
+  const { rsi, macd, signal, hist, ma50, ma200, bbUpper, bbMid, bbLower, price } = taData;
+
+  // RSI signal
+  const rsiSignal = rsi >= 70 ? ['bear','Sobrecomprado'] : rsi <= 30 ? ['bull','Sobrevendido'] : rsi >= 55 ? ['bull','Alcista'] : rsi <= 45 ? ['bear','Bajista'] : ['neutral','Neutral'];
+
+  // MACD signal
+  const macdSignal = macd > signal ? ['bull','Alcista'] : ['bear','Bajista'];
+
+  // MA signal
+  const maSignal = price > ma200 ? ['bull', price > ma50 ? 'Sobre MA50 y MA200' : 'Sobre MA200'] : ['bear', 'Bajo MA200'];
+
+  // BB signal
+  const bbSignal = price > bbUpper * 0.98 ? ['bear','Cerca sup.'] : price < bbLower * 1.02 ? ['bull','Cerca inf.'] : ['neutral','Dentro de bandas'];
+
+  // Overall bias
+  const bulls = [rsiSignal, macdSignal, maSignal, bbSignal].filter(s => s[0] === 'bull').length;
+  const bears = [rsiSignal, macdSignal, maSignal, bbSignal].filter(s => s[0] === 'bear').length;
+  const overallColor = bulls > bears ? 'var(--green)' : bears > bulls ? 'var(--red)' : 'var(--muted)';
+  const overallText  = bulls > bears ? '▲ Sesgo alcista' : bears > bulls ? '▼ Sesgo bajista' : '● Neutral';
+
+  document.getElementById('taContent').innerHTML = `
+    <div class="ta-grid">
+      <div class="ta-card">
+        <div class="ta-card-label">RSI (14) <button class="info-btn" onclick="showTooltip('rsi')">i</button></div>
+        <div class="ta-card-value">${rsi.toFixed(1)}</div>
+        <div class="ta-card-signal signal-${rsiSignal[0]}">${rsiSignal[1]}</div>
+      </div>
+      <div class="ta-card">
+        <div class="ta-card-label">MACD <button class="info-btn" onclick="showTooltip('macd')">i</button></div>
+        <div class="ta-card-value">${macd.toFixed(0)}</div>
+        <div class="ta-card-signal signal-${macdSignal[0]}">${macdSignal[1]} · Hist ${hist > 0 ? '+' : ''}${hist.toFixed(0)}</div>
+      </div>
+      <div class="ta-card">
+        <div class="ta-card-label">MA50 / MA200 <button class="info-btn" onclick="showTooltip('ma')">i</button></div>
+        <div class="ta-card-value" style="font-size:13px">$${Math.round(ma50).toLocaleString()} / $${Math.round(ma200).toLocaleString()}</div>
+        <div class="ta-card-signal signal-${maSignal[0]}">${maSignal[1]}</div>
+      </div>
+      <div class="ta-card">
+        <div class="ta-card-label">Bollinger Bands <button class="info-btn" onclick="showTooltip('bbands')">i</button></div>
+        <div class="ta-card-value" style="font-size:13px">$${Math.round(bbLower).toLocaleString()} – $${Math.round(bbUpper).toLocaleString()}</div>
+        <div class="ta-card-signal signal-${bbSignal[0]}">${bbSignal[1]}</div>
+      </div>
+    </div>
+    <div class="ta-summary">
+      <span style="font-weight:700;color:${overallColor}">${overallText}</span> —
+      ${bulls} indicadores alcistas, ${bears} bajistas.
+      RSI en ${rsi.toFixed(1)}, precio ${price > ma200 ? 'sobre' : 'bajo'} MA200.
+      ${macd > signal ? 'MACD con momentum positivo.' : 'MACD con momentum negativo.'}
+      ${price > bbUpper * 0.98 ? 'Precio rozando banda superior de Bollinger.' : price < bbLower * 1.02 ? 'Precio rozando banda inferior de Bollinger.' : 'Precio dentro de las bandas de Bollinger.'}
+    </div>`;
+}
+
+// ── Tooltip ──
+function showTooltip(key) {
+  const info  = TA_INFO[key];
+  const data  = taData;
+  if (!info) return;
+
+  let current = '';
+  if (data) {
+    if (key === 'rsi')    current = info.interpret(data.rsi);
+    if (key === 'macd')   current = info.interpret(data.macd, data.signal, data.hist);
+    if (key === 'ma')     current = info.interpret(data.price, data.ma50, data.ma200);
+    if (key === 'bbands') current = info.interpret(data.price, data.bbUpper, data.bbLower, data.bbMid);
+  }
+
+  document.getElementById('tooltipTitle').textContent   = info.title;
+  document.getElementById('tooltipBody').innerHTML      = info.body;
+  document.getElementById('tooltipCurrent').textContent = current;
+  document.getElementById('tooltipOverlay').classList.add('open');
+}
+
+function closeTooltip(e) {
+  if (!e || e.target === document.getElementById('tooltipOverlay')) {
+    document.getElementById('tooltipOverlay').classList.remove('open');
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 //  NEWS — Claude API
