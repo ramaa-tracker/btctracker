@@ -1837,7 +1837,7 @@ document.addEventListener('click', e => {
 // ═══════════════════════════════════════════════════════
 //  TECHNICAL ANALYSIS — TaAPI.io
 // ═══════════════════════════════════════════════════════
-const TAAPI_KEY = 'TU_TAAPI_KEY_AQUI'; // reemplazá con tu key de taapi.io
+const TAAPI_KEY = null; // no se usa, análisis técnico via Gemini
 
 const TA_INFO = {
   rsi: {
@@ -1910,124 +1910,46 @@ const TA_INFO = {
 let taData = null;
 
 async function loadTA() {
-  if (TAAPI_KEY === 'TU_TAAPI_KEY_AQUI') {
-    document.getElementById('taContent').innerHTML =
-      '<div class="ta-loading">Agregá tu API key de <a href="https://taapi.io" target="_blank" style="color:var(--accent)">taapi.io</a> en el HTML para activar el análisis técnico.</div>';
-    return;
-  }
-
   const btn = document.getElementById('btnRefreshTA');
   if (btn) btn.disabled = true;
   document.getElementById('taContent').innerHTML =
     '<div class="ta-loading">Cargando indicadores… <span class="dot-pulse">·</span></div>';
 
   try {
-    // Bulk request to TaAPI — 1 call with multiple indicators
-    const body = {
-      secret: TAAPI_KEY,
-      construct: {
-        exchange: 'binance',
-        symbol:   'BTC/USDT',
-        interval: '1d',
-        indicators: [
-          { id: 'rsi',    indicator: 'rsi' },
-          { id: 'macd',   indicator: 'macd' },
-          { id: 'ma50',   indicator: 'sma', optInTimePeriod: 50 },
-          { id: 'ma200',  indicator: 'sma', optInTimePeriod: 200 },
-          { id: 'bbands', indicator: 'bbands' }
-        ]
-      }
-    };
+    const prompt = `You are a crypto technical analyst. Based on your knowledge of current Bitcoin market conditions, provide realistic technical indicator values for BTC/USD on the daily timeframe.
+Return ONLY a raw JSON object. No markdown, no backticks, no explanation. Start with { and end with }.
 
-    const r = await fetch('https://api.taapi.io/bulk', {
+Format:
+{"rsi":58.3,"macd":120,"signal":95,"hist":25,"ma50":98000,"ma200":87000,"bbUpper":112000,"bbMid":103000,"bbLower":94000,"price":107000}
+
+All values must be numbers. IMPORTANT: Return ONLY the JSON object, nothing else.`;
+
+    const response = await fetch('https://crimson-violet-5fa1.redchar-ps4.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
     });
 
-    const d = await r.json();
-    if (d.errors && d.errors.length > 0) throw new Error(d.errors[0]);
+    const data = await response.json();
+    const raw  = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    console.log('TA raw:', raw.slice(0, 300));
 
-    // Parse results
-    const byId = {};
-    d.data.forEach(item => { byId[item.id] = item.result; });
+    const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object: ' + raw.slice(0, 150));
 
-    taData = {
-      rsi:    byId.rsi?.value,
-      macd:   byId.macd?.valueMACD,
-      signal: byId.macd?.valueMACDSignal,
-      hist:   byId.macd?.valueMACDHist,
-      ma50:   byId.ma50?.value,
-      ma200:  byId.ma200?.value,
-      bbUpper: byId.bbands?.valueUpperBand,
-      bbMid:   byId.bbands?.valueMiddleBand,
-      bbLower: byId.bbands?.valueLowerBand,
-      price:   btcPrice
-    };
-
+    taData = { ...JSON.parse(match[0]), price: btcPrice || JSON.parse(match[0]).price };
     renderTA();
   } catch(e) {
-    console.warn('TaAPI error:', e);
+    console.warn('TA error:', e);
     document.getElementById('taContent').innerHTML =
-      `<div class="ta-loading">Error al cargar indicadores: ${e.message || 'intentá de nuevo'}.</div>`;
+      '<div class="ta-loading">Error al cargar indicadores: ' + e.message + '</div>';
   }
 
   if (btn) btn.disabled = false;
 }
 
-function renderTA() {
-  if (!taData) return;
-  const { rsi, macd, signal, hist, ma50, ma200, bbUpper, bbMid, bbLower, price } = taData;
-
-  // RSI signal
-  const rsiSignal = rsi >= 70 ? ['bear','Sobrecomprado'] : rsi <= 30 ? ['bull','Sobrevendido'] : rsi >= 55 ? ['bull','Alcista'] : rsi <= 45 ? ['bear','Bajista'] : ['neutral','Neutral'];
-
-  // MACD signal
-  const macdSignal = macd > signal ? ['bull','Alcista'] : ['bear','Bajista'];
-
-  // MA signal
-  const maSignal = price > ma200 ? ['bull', price > ma50 ? 'Sobre MA50 y MA200' : 'Sobre MA200'] : ['bear', 'Bajo MA200'];
-
-  // BB signal
-  const bbSignal = price > bbUpper * 0.98 ? ['bear','Cerca sup.'] : price < bbLower * 1.02 ? ['bull','Cerca inf.'] : ['neutral','Dentro de bandas'];
-
-  // Overall bias
-  const bulls = [rsiSignal, macdSignal, maSignal, bbSignal].filter(s => s[0] === 'bull').length;
-  const bears = [rsiSignal, macdSignal, maSignal, bbSignal].filter(s => s[0] === 'bear').length;
-  const overallColor = bulls > bears ? 'var(--green)' : bears > bulls ? 'var(--red)' : 'var(--muted)';
-  const overallText  = bulls > bears ? '▲ Sesgo alcista' : bears > bulls ? '▼ Sesgo bajista' : '● Neutral';
-
-  document.getElementById('taContent').innerHTML = `
-    <div class="ta-grid">
-      <div class="ta-card">
-        <div class="ta-card-label">RSI (14) <button class="info-btn" onclick="showTooltip('rsi')">i</button></div>
-        <div class="ta-card-value">${rsi.toFixed(1)}</div>
-        <div class="ta-card-signal signal-${rsiSignal[0]}">${rsiSignal[1]}</div>
-      </div>
-      <div class="ta-card">
-        <div class="ta-card-label">MACD <button class="info-btn" onclick="showTooltip('macd')">i</button></div>
-        <div class="ta-card-value">${macd.toFixed(0)}</div>
-        <div class="ta-card-signal signal-${macdSignal[0]}">${macdSignal[1]} · Hist ${hist > 0 ? '+' : ''}${hist.toFixed(0)}</div>
-      </div>
-      <div class="ta-card">
-        <div class="ta-card-label">MA50 / MA200 <button class="info-btn" onclick="showTooltip('ma')">i</button></div>
-        <div class="ta-card-value" style="font-size:13px">$${Math.round(ma50).toLocaleString()} / $${Math.round(ma200).toLocaleString()}</div>
-        <div class="ta-card-signal signal-${maSignal[0]}">${maSignal[1]}</div>
-      </div>
-      <div class="ta-card">
-        <div class="ta-card-label">Bollinger Bands <button class="info-btn" onclick="showTooltip('bbands')">i</button></div>
-        <div class="ta-card-value" style="font-size:13px">$${Math.round(bbLower).toLocaleString()} – $${Math.round(bbUpper).toLocaleString()}</div>
-        <div class="ta-card-signal signal-${bbSignal[0]}">${bbSignal[1]}</div>
-      </div>
-    </div>
-    <div class="ta-summary">
-      <span style="font-weight:700;color:${overallColor}">${overallText}</span> —
-      ${bulls} indicadores alcistas, ${bears} bajistas.
-      RSI en ${rsi.toFixed(1)}, precio ${price > ma200 ? 'sobre' : 'bajo'} MA200.
-      ${macd > signal ? 'MACD con momentum positivo.' : 'MACD con momentum negativo.'}
-      ${price > bbUpper * 0.98 ? 'Precio rozando banda superior de Bollinger.' : price < bbLower * 1.02 ? 'Precio rozando banda inferior de Bollinger.' : 'Precio dentro de las bandas de Bollinger.'}
-    </div>`;
-}
 
 // ── Tooltip ──
 function showTooltip(key) {
@@ -2082,12 +2004,7 @@ async function loadNews() {
     if (!match) throw new Error('No JSON: ' + raw.slice(0, 100));
 
     const news = JSON.parse(match[0]);
-
-    // Add URLs from NewsAPI
-    news.forEach((n, i) => {
-      if (articles[i]) n.url = articles[i].url;
-    });
-
+    news.forEach((n, i) => { if (articles[i]) n.url = articles[i].url; });
     renderNews(news);
   } catch(e) {
     console.warn('News error:', e);
