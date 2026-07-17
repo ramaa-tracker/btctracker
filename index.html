@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23f7931a'/><text y='.9em' font-size='80' x='10'>₿</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='28' fill='%23f7931a'/><text y='76' x='50' font-size='72' text-anchor='middle' fill='white' font-family='Arial Black,Arial' font-weight='900'>B</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BTC Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -1837,7 +1837,7 @@ document.addEventListener('click', e => {
 // ═══════════════════════════════════════════════════════
 //  TECHNICAL ANALYSIS — TaAPI.io
 // ═══════════════════════════════════════════════════════
-const TAAPI_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbHVlIjoiNmEzZTVmNzg5MzEwZjViOGU2OWUyZTU0IiwiaWF0IjoxNzgyNDcyNTY4LCJleHAiOjMzMjg2OTM2NTY4fQ.HTQL8gasaFu94yyMq0_Wj9wQEf9ySqjHayit0Zp6_YM'; // reemplazá con tu key de taapi.io
+const TAAPI_KEY = 'TU_TAAPI_KEY_AQUI'; // reemplazá con tu key de taapi.io
 
 const TA_INFO = {
   rsi: {
@@ -2063,31 +2063,35 @@ let newsLoaded = false;
 async function loadNews() {
   const grid = document.getElementById('newsGrid');
   const btn  = document.getElementById('btnRefreshNews');
-  grid.innerHTML = '<div class="news-loading">Analizando noticias… <span class="dot-pulse">·</span></div>';
+  grid.innerHTML = '<div class="news-loading">Cargando noticias… <span class="dot-pulse">·</span></div>';
   if (btn) btn.disabled = true;
 
   try {
-    const prompt = `Find the 4 most recent important Bitcoin news. Return ONLY a JSON array, nothing else. No markdown, no backticks, no intro text. Start your response with [ and end with ]. Format: [{"title":"...","date":"DD/MM/YYYY","impact":"bullish|bearish|neutral","analysis":"2 sentences in Spanish explaining how this affects BTC price"}]`;
-
-    const response = await fetch('https://crimson-violet-5fa1.redchar-ps4.workers.dev', {
+    const response = await fetch('https://crimson-violet-5fa1.redchar-ps4.workers.dev/news', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+      body: JSON.stringify({})
     });
 
-    const data  = await response.json();
-    const raw   = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const match = clean.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error('No JSON array found: ' + clean.slice(0, 100));
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+
+    const raw      = (data.raw || '').replace(/```json|```/g, '').trim();
+    const articles = data.articles || [];
+    const match    = raw.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('No JSON: ' + raw.slice(0, 100));
 
     const news = JSON.parse(match[0]);
+
+    // Add URLs from NewsAPI
+    news.forEach((n, i) => {
+      if (articles[i]) n.url = articles[i].url;
+    });
+
     renderNews(news);
   } catch(e) {
     console.warn('News error:', e);
-    grid.innerHTML = '<div class="news-loading">Error al cargar noticias. Intentá de nuevo.</div>';
+    grid.innerHTML = '<div class="news-loading">Error al cargar noticias: ' + e.message + '</div>';
   }
 
   if (btn) btn.disabled = false;
@@ -2107,7 +2111,7 @@ function renderNews(news) {
         <span class="news-impact ${n.impact}">${n.impact === 'bullish' ? '▲ Alcista' : n.impact === 'bearish' ? '▼ Bajista' : '● Neutral'}</span>
         <span class="news-date">${n.date || ''}</span>
       </div>
-      <div class="news-title">${n.title}</div>
+      <div class="news-title">${n.url ? `<a href="${n.url}" target="_blank" style="color:var(--text);text-decoration:none;">${n.title} ↗</a>` : n.title}</div>
       <div class="news-analysis">${n.analysis}</div>
     </div>
   `).join('');
